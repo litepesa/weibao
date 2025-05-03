@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "262631431533",
+    "project_id": "weibao-3723e",
+    "storage_bucket": "weibao-3723e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:262631431533:android:7328385e5cb21a51f10e64",
+        "android_client_info": {
+          "package_name": "com.pomasoft.weibao"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGiPp1SUVKffKBW7CZVJeFW1iXP_RUfGo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
