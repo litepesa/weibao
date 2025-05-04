@@ -1,30 +1,33 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:weibao/app.dart';
 import 'package:weibao/firebase_options.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Add this line
+  // Ensure Flutter is initialized
+  WidgetsFlutterBinding.ensureInitialized();
   
+  // Lock orientation to portrait mode for TikTok-like experience
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+  
+  // Initialize Firebase
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
-    ); // Fixed missing closing parenthesis
+    );
+    print('Firebase initialized successfully');
   } catch (e) {
     print('Firebase initialization failed: $e');
   }
   
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'weibao',
-      home: const Text('Weibao'),
-    );
-  }
+  // Run app with Riverpod
+  runApp(
+    const ProviderScope(
+      child: WeibaoApp(),
+    ),
+  );
 }
