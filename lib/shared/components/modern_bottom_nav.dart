@@ -77,26 +77,16 @@ class ModernBottomNavBar extends StatelessWidget {
                     children: List.generate(items.length, (index) {
                       final item = items[index];
                       final isSelected = index == currentIndex;
-                      final isPostTab = index == 2;
-
-                      if (isPostTab) {
-                        return _buildPostButton(
-                          index: index,
-                          isSelected: isSelected,
-                          selectedColor: effectiveSelectedColor,
-                          icon: item.icon,
-                        );
-                      } else {
-                        return _buildNavItem(
-                          index: index,
-                          isSelected: isSelected,
-                          selectedColor: effectiveSelectedColor,
-                          unselectedColor: effectiveUnselectedColor,
-                          icon: item.icon,
-                          activeIcon: item.activeIcon,
-                          label: item.label ?? '',
-                        );
-                      }
+                      
+                      return _buildNavItem(
+                        index: index,
+                        isSelected: isSelected,
+                        selectedColor: effectiveSelectedColor,
+                        unselectedColor: effectiveUnselectedColor,
+                        icon: item.icon,
+                        activeIcon: item.activeIcon,
+                        label: item.label ?? '',
+                      );
                     }),
                   ),
                 ),
@@ -152,22 +142,10 @@ class ModernBottomNavBar extends StatelessWidget {
                               child: icon,
                             ),
                     ),
-                    if (isSelected)
-                      Positioned(
-                        top: -2,
-                        child: Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: selectedColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 transitionBuilder: (Widget child, Animation<double> animation) {
@@ -195,24 +173,6 @@ class ModernBottomNavBar extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPostButton({
-    required int index,
-    required bool isSelected,
-    required Color selectedColor,
-    required Widget icon,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => onTap(index),
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: icon,
         ),
       ),
     );

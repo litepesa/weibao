@@ -1,8 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:weibao/shared/theme/theme_constants.dart';
 import 'package:weibao/shared/components/modern_bottom_nav.dart';
-import 'package:weibao/shared/components/custom_post_button.dart';
 
 final selectedTabProvider = StateProvider<int>((ref) => 0);
 
@@ -10,10 +10,9 @@ class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   static const List<String> _tabTitles = [
-    'Home',
     'Chats',
-    'Post',
-    'Cart',
+    'Status',
+    'Shop',
     'Profile',
   ];
 
@@ -22,11 +21,11 @@ class HomeScreen extends ConsumerWidget {
     final selectedIndex = ref.watch(selectedTabProvider);
     
     // Determine if app bar should be shown (hidden for home and cart tabs)
-    final bool showAppBar = selectedIndex != 0 && selectedIndex != 3;
+    final bool showAppBar = selectedIndex != 2 && selectedIndex != 3;
     
     // Determine background color based on selected tab
     Color backgroundColor = Theme.of(context).scaffoldBackgroundColor; // default color
-    if (selectedIndex == 0) {
+    if (selectedIndex == 2) {
       backgroundColor = Colors.black;
     } else if (selectedIndex == 3) {
       backgroundColor = Colors.white;
@@ -34,18 +33,34 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: showAppBar ? AppBar(
-        title: Text(
-          _tabTitles[selectedIndex],
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
+        title: RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: 'Wei',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white, // Different color for 'Wei'
+                  fontSize: 23,
+                ),
+              ),
+              TextSpan(
+                text: 'Bao',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary, // Different color for 'Bao'
+                  fontSize: 24,
+                ),
+              ),
+            ],
           ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: const Icon(Icons.wifi), // WiFi icon instead of notifications
             onPressed: () {
-              _showDevelopmentMessage(context, 'Notifications feature');
+              _showDevelopmentMessage(context, 'WiFi feature');
             },
           ),
           IconButton(
@@ -96,29 +111,24 @@ class HomeScreen extends ConsumerWidget {
         },
         items: [
           const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
+            icon: Icon(CupertinoIcons.bubble_left),
+            activeIcon: Icon(CupertinoIcons.bubble_left_fill),
             label: 'Chats',
           ),
-          BottomNavigationBarItem(
-            icon: CustomPostButton(isActive: false),
-            activeIcon: CustomPostButton(isActive: true),
-            label: '',
+          const BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.camera),
+            activeIcon: Icon(CupertinoIcons.camera_fill),
+            label: 'Status',
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart_outlined),
-            activeIcon: Icon(Icons.shopping_cart),
-            label: 'Cart',
+            icon: Icon(Icons.store_outlined),
+            activeIcon: Icon(Icons.store),
+            label: 'Marketplace',
           ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
-            label: 'Profile',
+            label: 'Me',
           ),
         ],
       ),
@@ -137,12 +147,11 @@ class HomeScreen extends ConsumerWidget {
   
   IconData _getIconForIndex(int index) {
     switch (index) {
-      case 0: return Icons.home;
-      case 1: return Icons.chat_bubble;
-      case 2: return Icons.add_box;
-      case 3: return Icons.shopping_cart;
-      case 4: return Icons.person;
-      default: return Icons.home;
+      case 0: return Icons.chat_bubble;
+      case 1: return Icons.camera_alt;
+      case 2: return Icons.store;
+      case 3: return Icons.person;
+      default: return Icons.chat_bubble;
     }
   }
 }
