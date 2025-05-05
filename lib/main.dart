@@ -1,21 +1,17 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:weibao/features/auth/screens/landing_screen.dart';
-import 'package:weibao/firebase_options.dart';
-import 'package:weibao/main_screens/home_screen.dart';
-import 'package:weibao/providers/app_theme.dart';
-import 'package:weibao/shared/theme/system_ui_overlay.dart';
+import 'package:weibao/constants.dart';
+import 'package:weibao/routes/app_router.dart';
 
 // Provider for Firebase initialization status
 final firebaseInitProvider = FutureProvider<bool>((ref) async {
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp();
     return true;
   } catch (e) {
-    print('Firebase initialization failed: $e');
+    debugPrint('Firebase initialization failed: $e');
     return false;
   }
 });
@@ -23,12 +19,26 @@ final firebaseInitProvider = FutureProvider<bool>((ref) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Wrap the entire app with ProviderScope for Riverpod and SystemUIOverlay for transparent system bars
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
+  // Set system UI overlay style for status bar
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+  
+  // Wrap the entire app with ProviderScope for Riverpod
   runApp(
     const ProviderScope(
-      child: SystemUIOverlay(
-        child: MyApp(),
-      ),
+      child: MyApp(),
     ),
   );
 }
@@ -41,17 +51,66 @@ class MyApp extends ConsumerWidget {
     // Watch the Firebase initialization status
     final firebaseInit = ref.watch(firebaseInitProvider);
     
-    // Get the app theme from the theme provider
-    final appTheme = ref.watch(themeProvider);
-    
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'weibao',
-      theme: appTheme.themeData,
+      title: 'WeiBao',
+      theme: ThemeData(
+        primaryColor: Constants.primaryColor,
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: IconThemeData(color: Colors.black87),
+          titleTextStyle: TextStyle(
+            color: Colors.black87,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Constants.primaryColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+          ),
+        ),
+        colorScheme: ColorScheme.fromSwatch().copyWith(
+          primary: Constants.primaryColor,
+          secondary: Constants.secondaryColor,
+        ),
+      ),
+      initialRoute: Constants.landingScreen,
+      onGenerateRoute: AppRouter.generateRoute,
       home: firebaseInit.when(
         data: (initialized) {
-          // If Firebase is initialized successfully, show the HomeScreen
-          return const HomeScreen();
+          if (initialized) {
+            return const SizedBox(); // Router will handle navigation
+          } else {
+            return Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Failed to initialize Firebase',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        ref.refresh(firebaseInitProvider);
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
         },
         loading: () => const Scaffold(
           body: Center(
