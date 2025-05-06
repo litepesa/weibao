@@ -3,9 +3,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:weibao/constants.dart';
 import 'package:weibao/firebase_options.dart';
-import 'package:weibao/main_screens/home_screen.dart';
-import 'package:weibao/shared/theme/chat_theme_extension.dart';
+import 'package:weibao/router.dart';
 import 'package:weibao/shared/theme/system_ui_overlay.dart';
 import 'package:weibao/shared/theme/theme_constants.dart';
 
@@ -37,15 +37,12 @@ void main() async {
   runApp(
     ProviderScope(
       overrides: [
-        // Use correct syntax for Riverpod 2.x
         firebaseInitializedProvider.overrideWith((ref) => firebaseInitialized),
       ],
       child: const WeiBaoApp(),
     ),
   );
 }
-
-// Removed the _configureSystemUI function as it's handled by SystemUIOverlay widget
 
 Future<bool> _initializeFirebase() async {
   try {
@@ -56,7 +53,6 @@ Future<bool> _initializeFirebase() async {
     return true;
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
-    // In production, you might want to show a dialog here
     return false;
   }
 }
@@ -93,15 +89,27 @@ class _WeiBaoAppState extends ConsumerState<WeiBaoApp> with WidgetsBindingObserv
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
-  
-  @override
-  void didChangePlatformBrightness() {
-    // The SystemUIOverlay widget handles this now
-    super.didChangePlatformBrightness();
-  }
 
   @override
   Widget build(BuildContext context) {
+    final isFirebaseInitialized = ref.watch(firebaseInitializedProvider);
+    final isAppInitialized = ref.watch(appInitializedProvider);
+    
+    // Show loading indicator if app is not initialized yet
+    if (!isAppInitialized || !isFirebaseInitialized) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: AppColors.background,
+          body: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
+            ),
+          ),
+        ),
+      );
+    }
+    
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'WeiBao',
@@ -123,18 +131,17 @@ class _WeiBaoAppState extends ConsumerState<WeiBaoApp> with WidgetsBindingObserv
           fillColor: AppColors.inputBackground,
           filled: true,
         ),
-        extensions: [
-          ChatThemeExtension.defaultTheme,
-        ],
       ),
-      home: const SystemUIOverlay(
-        child: HomeScreen(),
-      ), // Wrap HomeScreen with SystemUIOverlay
+      initialRoute: Constants.splashScreen,
+      onGenerateRoute: AppRouter.generateRoute,
       
       // Add error handling for Flutter framework errors
       builder: (context, child) {
         // Add error boundary widget
         if (child == null) return const SizedBox.shrink();
+        
+        // Wrap with error boundary widget
+        final errorBoundaryWidget = ErrorBoundaryWidget(child: child);
         
         // Initialize responsive text scaling
         return MediaQuery(
@@ -142,7 +149,7 @@ class _WeiBaoAppState extends ConsumerState<WeiBaoApp> with WidgetsBindingObserv
           data: MediaQuery.of(context).copyWith(
             textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.85, 1.3),
           ),
-          child: child,
+          child: SystemUIOverlay(child: errorBoundaryWidget),
         );
       },
     );
@@ -185,6 +192,7 @@ class _ErrorBoundaryWidgetState extends State<ErrorBoundaryWidget> {
     if (hasError) {
       // Return fallback UI for errors
       return Material(
+        color: AppColors.background,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -195,12 +203,13 @@ class _ErrorBoundaryWidgetState extends State<ErrorBoundaryWidget> {
                 const SizedBox(height: 16),
                 const Text(
                   'Something went wrong',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   errorDetails?.exception.toString() ?? 'Unknown error',
                   textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
@@ -210,6 +219,9 @@ class _ErrorBoundaryWidgetState extends State<ErrorBoundaryWidget> {
                       errorDetails = null;
                     });
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreen,
+                  ),
                   child: const Text('Try Again'),
                 ),
               ],

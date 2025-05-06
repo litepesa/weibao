@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class Constants {
-  // screens routes
+  // Screen routes
+  static const String splashScreen = '/splashScreen';
   static const String landingScreen = '/landingScreen';
   static const String loginScreen = '/loginScreen';
   static const String otpScreen = '/otpScreen';
@@ -50,19 +51,24 @@ class Constants {
   static const String token = 'token';
   static const String aboutMe = 'aboutMe';
   static const String createdAt = 'createdAt';
+  static const String isOnline = 'isOnline';
   static const String contactsUIDs = 'contactsUIDs';
   static const String blockedUIDs = 'blockedUIDs';
 
+  // Authentication constants
   static const String verificationId = 'verificationId';
+  static const String userModel = 'userModel';
 
+  // Firestore collection names
   static const String users = 'users';
   static const String userImages = 'userImages';
-  static const String userModel = 'userModel';
   
+  // Contact-related constants
   static const String contactName = 'contactName';
   static const String contactImage = 'contactImage';
   static const String groupId = 'groupId';
 
+  // Messaging-related constants
   static const String senderUID = 'senderUID';
   static const String senderName = 'senderName';
   static const String senderImage = 'senderImage';
@@ -87,15 +93,6 @@ class Constants {
   static const String private = 'private';
   static const String public = 'public';
 
-  // App theme/branding
-  static const Color primaryColor = Color(0xFF07C160); // WeiBao green
-  static const Color secondaryColor = Color(0xFF1A73E8); // Accent blue
-  static const Color backgroundLight = Color(0xFFF7F7F7);
-  static const Color backgroundDark = Color(0xFF0F0F0F);
-  static const Color textDark = Color(0xFF181818);
-  static const Color textMedium = Color(0xFF888888);
-  static const Color textLight = Color(0xFFB2B2B2);
-  
   // Privacy messages
   static const String privacyManifesto = 'WeiBao is built with privacy at its core. Your conversations, status, and behavior are never tracked.';
   static const String privacyFeatures = 'No read receipts, no typing indicators, no online status tracking - your privacy is our priority.';
