@@ -18,8 +18,13 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const LoginScreen());
         
       case Constants.otpScreen:
-        if (args is Map) {
-          return MaterialPageRoute(builder: (_) => OtpScreen(arguments: args));
+        if (args is Map<String, dynamic>) {
+          return MaterialPageRoute(
+            builder: (_) => OtpScreen(
+              key: const Key('OtpScreen'), // Optional: add a key
+              arguments: args,
+            ),
+          );
         }
         return _errorRoute('OTP Screen requires verification ID and phone number');
         

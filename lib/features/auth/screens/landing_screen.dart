@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 import 'package:weibao/constants.dart';
@@ -19,6 +20,12 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
   @override
   void initState() {
     super.initState();
+    // Set system UI overlay style to match app theme
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Color(0xFF0F0F0F), // weibaoBackgroundDark
+      systemNavigationBarDividerColor: Colors.transparent,
+    ));
     debugPrint("LandingScreen initialized");
     _checkAuthentication();
   }
@@ -101,7 +108,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                 },
                 child: Text(
                   "Taking too long? Tap here",
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ],
@@ -112,7 +119,13 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
     
     return Scaffold(
       backgroundColor: weibaoBackgroundDark,
+      // Add extendBodyBehindAppBar to ensure full screen coverage
+      extendBodyBehindAppBar: true,
+      // Add extendBody to ensure body extends to bottom edge
+      extendBody: true,
       body: SafeArea(
+        // Exclude bottom padding to prevent white space
+        bottom: false,
         child: Column(
           children: [
             const Spacer(flex: 2),
@@ -173,7 +186,6 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 16,
-                fontWeight: FontWeight.w300,
               ),
             ),
             
@@ -224,20 +236,9 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
             
             const SizedBox(height: 20),
             
-            // Legal text
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40.0),
-              child: Text(
-                'By continuing, you accept our Terms & Privacy Policy',
-                style: TextStyle(
-                  color: Colors.white38,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
             
-            const Spacer(flex: 1),
+            // Add padding at bottom to prevent content from being cut off by navigation gestures
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
           ],
         ),
       ),
