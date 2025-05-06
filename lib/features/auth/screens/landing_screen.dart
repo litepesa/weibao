@@ -49,13 +49,14 @@ class _LandingScreenState extends ConsumerState<LandingScreen> with SingleTicker
     final authNotifier = ref.read(authProvider.notifier);
     bool isAuthenticated = await authNotifier.checkAuthenticationState();
 
-    if (isAuthenticated) {
-      // Navigate to home screen if already authenticated
+    if (isAuthenticated && authNotifier.state.userModel != null) {
+      // Navigate to home screen if already authenticated and has user data
       if (mounted) {
+        debugPrint('User is authenticated with data, navigating to home screen from landing');
         Navigator.pushReplacementNamed(context, Constants.homeScreen);
       }
     } else {
-      // Show landing screen animations if not authenticated
+      // Show landing screen animations if not authenticated or missing user data
       if (mounted) {
         setState(() {
           _isLoading = false;

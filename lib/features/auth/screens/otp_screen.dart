@@ -74,7 +74,7 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
   }
   
   // Resend OTP code
-  void _resendOTP() {
+  void _resendOTP(String phoneNumber) {
     // Reset the timer
     setState(() {
       _resendEnabled = false;
@@ -84,16 +84,29 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
     
     _startResendTimer();
     
-    // Show snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Verification code resent'),
-        backgroundColor: AppColors.primaryGreen,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    final authNotifier = ref.read(authProvider.notifier);
     
-    // TODO: Implement actual resend logic
+    // Resend verification code
+    authNotifier.signInWithPhoneNumber(
+      phoneNumber: phoneNumber,
+      context: context,
+      onCodeSent: (String verificationId) {
+        // Update the verification ID in the arguments
+        if (mounted) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map;
+          args[Constants.verificationId] = verificationId;
+        }
+        
+        // Show snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification code resent'),
+            backgroundColor: AppColors.primaryGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+    );
   }
   
   // Verify OTP
@@ -111,6 +124,22 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
         if (userExists) {
           // User exists, get user data and navigate to home
           await authNotifier.getUserDataFromFireStore();
+          
+          // Double check we actually got user data
+          if (authNotifier.state.userModel == null) {
+            debugPrint('User exists in Firestore but failed to fetch user data');
+            // Show error to user
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Failed to load your profile. Please try again.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+          
           await authNotifier.saveUserDataToSharedPreferences();
           
           if (mounted) {
@@ -277,7 +306,6 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
                       submittedPinTheme: submittedPinTheme,
                       errorPinTheme: errorPinTheme,
                       pinAnimationType: PinAnimationType.scale,
-                      //androidSmsAutofillMethod: AndroidSmsAutofillMethod.smsUserConsentApi,
                       closeKeyboardWhenCompleted: true,
                       onCompleted: (pin) {
                         _verifyOTP(verificationId, pin);
@@ -299,8 +327,8 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
                                   width: 60,
                                   decoration: BoxDecoration(
                                     color: Colors.green.withOpacity(0.2),
-                                    shape: BoxShape.circle,
-                                  ),
+                                    shape: BoxShape.circle
+                                    ),
                                   child: const Icon(
                                     Icons.check,
                                     color: Colors.green,
@@ -327,7 +355,7 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
                         // Resend button or timer
                         _resendEnabled
                             ? TextButton(
-                                onPressed: _resendOTP,
+                                onPressed: () => _resendOTP(phoneNumber),
                                 child: Text(
                                   'Resend Code',
                                   style: TextStyle(

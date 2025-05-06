@@ -15,6 +15,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  bool _authCheckComplete = false;
 
   @override
   void initState() {
@@ -58,15 +59,42 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
   
   // Check if user is already authenticated
   void _checkAuthStatus() async {
-    final authNotifier = ref.read(authProvider.notifier);
-    bool isAuthenticated = await authNotifier.checkAuthenticationState();
+    if (_authCheckComplete) return; // Prevent multiple checks
     
-    if (mounted) {
-      if (isAuthenticated) {
-        // Navigate to home screen if authenticated
-        Navigator.pushReplacementNamed(context, Constants.homeScreen);
+    _authCheckComplete = true; // Mark as complete to prevent multiple navigations
+    
+    try {
+      final authNotifier = ref.read(authProvider.notifier);
+      
+      // Make sure to print detailed debug info
+      debugPrint('Starting authentication check...');
+      
+      bool isAuthenticated = await authNotifier.checkAuthenticationState();
+      
+      debugPrint('Authentication check result: $isAuthenticated');
+      debugPrint('User model: ${authNotifier.state.userModel != null ? 'exists' : 'null'}');
+      
+      if (mounted) {
+        if (isAuthenticated && authNotifier.state.userModel != null) {
+          debugPrint('User is authenticated with valid user data, navigating to home screen');
+          
+          // Navigate to home screen if authenticated and has user data
+          Navigator.pushReplacementNamed(context, Constants.homeScreen);
+        } else {
+          debugPrint('User is NOT authenticated or missing user data, navigating to landing screen');
+          
+          // Navigate to landing screen if not authenticated or missing user data
+          Navigator.pushReplacementNamed(context, Constants.landingScreen);
+        }
       } else {
-        // Navigate to landing screen if not authenticated
+        debugPrint('Widget no longer mounted, skipping navigation');
+      }
+    } catch (e) {
+      // Handle any errors during authentication check
+      debugPrint('Error during authentication check: $e');
+      
+      if (mounted) {
+        // Navigate to landing screen if there was an error
         Navigator.pushReplacementNamed(context, Constants.landingScreen);
       }
     }

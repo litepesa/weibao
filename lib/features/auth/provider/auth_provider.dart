@@ -63,8 +63,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       if (_auth.currentUser != null) {
         state = state.copyWith(uid: _auth.currentUser!.uid);
+        
+        // Check if user exists in Firestore
+        bool userExists = await checkUserExists();
+        if (!userExists) {
+          // User doesn't exist in Firestore even though they're authenticated in Firebase Auth
+          await _auth.signOut(); // Sign out the user since they don't have a profile
+          state = state.copyWith(isLoading: false, isSuccessful: false);
+          return false;
+        }
+        
         // Get user data from firestore
         await getUserDataFromFireStore();
+        
+        // Verify we have user data
+        if (state.userModel == null) {
+          debugPrint('User exists in Firestore but could not fetch user data');
+          state = state.copyWith(isLoading: false, isSuccessful: false);
+          return false;
+        }
+        
         // Save user data to shared preferences
         await saveUserDataToSharedPreferences();
 
@@ -102,6 +120,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (documentSnapshot.exists) {
         final userData = UserModel.fromMap(documentSnapshot.data() as Map<String, dynamic>);
         state = state.copyWith(userModel: userData);
+        debugPrint('Successfully fetched user data from Firestore');
+      } else {
+        debugPrint('User document does not exist in Firestore');
       }
     } catch (e) {
       debugPrint('Error getting user data from Firestore: $e');
@@ -115,6 +136,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
         await sharedPreferences.setString(
             Constants.userModel, jsonEncode(state.userModel!.toMap()));
+        debugPrint('Successfully saved user data to SharedPreferences');
+      } else {
+        debugPrint('Cannot save null user data to SharedPreferences');
       }
     } catch (e) {
       debugPrint('Error saving user data to SharedPreferences: $e');
@@ -133,6 +157,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
           userModel: userModel,
           uid: userModel.uid,
         );
+        debugPrint('Successfully retrieved user data from SharedPreferences');
+      } else {
+        debugPrint('No user data found in SharedPreferences');
       }
     } catch (e) {
       debugPrint('Error getting user data from SharedPreferences: $e');

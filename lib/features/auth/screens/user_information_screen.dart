@@ -45,6 +45,36 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> w
     );
     
     _animationController.forward();
+    
+    // Check if we have uid and phone number from auth state
+    final authState = ref.read(authProvider);
+    if (authState.uid == null || authState.phoneNumber == null) {
+      // Something is wrong with the auth state
+      debugPrint('WARNING: Missing uid or phone number in auth state at UserInformationScreen');
+      
+      // We should show an error and navigate back to login
+      Future.delayed(Duration.zero, () {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Authentication Error'),
+            content: const Text('There was a problem with your authentication. Please try again.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    Constants.loginScreen,
+                    (route) => false,
+                  );
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      });
+    }
   }
   
   @override
@@ -195,7 +225,7 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> w
     final authState = ref.read(authProvider);
     final authNotifier = ref.read(authProvider.notifier);
     
-    if (authState.uid == null) {
+    if (authState.uid == null || authState.phoneNumber == null) {
       showSnackBar(context, 'Authentication error. Please try again.');
       return;
     }
@@ -218,6 +248,7 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> w
       userModel: userModel,
       profileImage: _profileImage,
       onSuccess: () {
+        debugPrint('User profile created successfully');
         // Navigate to home screen
         Navigator.of(context).pushNamedAndRemoveUntil(
           Constants.homeScreen,
@@ -225,6 +256,7 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> w
         );
       },
       onFail: (error) {
+        debugPrint('Failed to save profile: $error');
         showSnackBar(context, 'Failed to save profile: $error');
       },
     );

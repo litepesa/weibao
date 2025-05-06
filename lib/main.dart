@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,14 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:weibao/constants.dart';
 import 'package:weibao/firebase_options.dart';
 import 'package:weibao/router.dart';
-import 'package:weibao/shared/theme/system_ui_overlay.dart';
 import 'package:weibao/shared/theme/theme_constants.dart';
-
-// Provider for Firebase initialization status
-final firebaseInitializedProvider = StateProvider<bool>((ref) => false);
-
-// Provider for app initialization status
-final appInitializedProvider = StateProvider<bool>((ref) => false);
+import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
   // Initialize Flutter binding
@@ -25,212 +18,55 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   
-  // Basic system UI configuration
-  await SystemChrome.setEnabledSystemUIMode(
-    SystemUiMode.edgeToEdge,
-    overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
-  );
-  
-  // Initialize Firebase with error handling
-  final firebaseInitialized = await _initializeFirebase();
-  
-  runApp(
-    ProviderScope(
-      overrides: [
-        firebaseInitializedProvider.overrideWith((ref) => firebaseInitialized),
-      ],
-      child: const WeiBaoApp(),
+  // System UI styling
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-}
-
-Future<bool> _initializeFirebase() async {
+  
+  // Initialize Firebase
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     debugPrint('Firebase initialized successfully');
-    return true;
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
-    return false;
-  }
-}
-
-class WeiBaoApp extends ConsumerStatefulWidget {
-  const WeiBaoApp({super.key});
-
-  @override
-  ConsumerState<WeiBaoApp> createState() => _WeiBaoAppState();
-}
-
-class _WeiBaoAppState extends ConsumerState<WeiBaoApp> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    
-    // Initialize app state asynchronously
-    _initializeApp();
   }
   
-  Future<void> _initializeApp() async {
-    // Initialize any app services, load preferences, etc.
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    // Mark app as initialized
-    if (mounted) {
-      ref.read(appInitializedProvider.notifier).state = true;
-    }
-  }
+  // Run app with minimal setup
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
+}
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final isFirebaseInitialized = ref.watch(firebaseInitializedProvider);
-    final isAppInitialized = ref.watch(appInitializedProvider);
-    
-    // Show loading indicator if app is not initialized yet
-    if (!isAppInitialized || !isFirebaseInitialized) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          backgroundColor: AppColors.background,
-          body: Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
-            ),
-          ),
-        ),
-      );
-    }
-    
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'WeiBao',
       theme: ThemeData(
-        brightness: Brightness.dark,
+        primaryColor: AppColors.primaryGreen,
         scaffoldBackgroundColor: AppColors.background,
-        colorScheme: const ColorScheme.dark(
+        colorScheme: ColorScheme.fromSwatch().copyWith(
           primary: AppColors.primaryGreen,
           secondary: AppColors.accentBlue,
           background: AppColors.background,
           surface: AppColors.surface,
-          error: AppColors.error,
-        ),
-        textTheme: Typography.whiteMountainView.apply(
-          bodyColor: AppColors.textPrimary,
-          displayColor: AppColors.textPrimary,
-        ),
-        inputDecorationTheme: const InputDecorationTheme(
-          fillColor: AppColors.inputBackground,
-          filled: true,
         ),
       ),
+      // Always start with splash screen, which will handle authentication check
       initialRoute: Constants.splashScreen,
       onGenerateRoute: AppRouter.generateRoute,
-      
-      // Add error handling for Flutter framework errors
-      builder: (context, child) {
-        // Add error boundary widget
-        if (child == null) return const SizedBox.shrink();
-        
-        // Wrap with error boundary widget
-        final errorBoundaryWidget = ErrorBoundaryWidget(child: child);
-        
-        // Initialize responsive text scaling
-        return MediaQuery(
-          // Prevent text scaling beyond reasonable limits for better accessibility
-          data: MediaQuery.of(context).copyWith(
-            textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.85, 1.3),
-          ),
-          child: SystemUIOverlay(child: errorBoundaryWidget),
-        );
-      },
     );
-  }
-}
-
-// Error boundary widget to gracefully handle UI errors
-class ErrorBoundaryWidget extends StatefulWidget {
-  final Widget child;
-  
-  const ErrorBoundaryWidget({super.key, required this.child});
-  
-  @override
-  State<ErrorBoundaryWidget> createState() => _ErrorBoundaryWidgetState();
-}
-
-class _ErrorBoundaryWidgetState extends State<ErrorBoundaryWidget> {
-  bool hasError = false;
-  FlutterErrorDetails? errorDetails;
-  
-  @override
-  void initState() {
-    super.initState();
-    FlutterError.onError = (FlutterErrorDetails details) {
-      setState(() {
-        hasError = true;
-        errorDetails = details;
-      });
-      
-      // Log the error
-      debugPrint('UI Error Caught by Boundary: ${details.exception}');
-      
-      // Forward to Flutter's error handler
-      FlutterError.presentError(details);
-    };
-  }
-  
-  @override
-  Widget build(BuildContext context) {
-    if (hasError) {
-      // Return fallback UI for errors
-      return Material(
-        color: AppColors.background,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, color: Colors.red, size: 60),
-                const SizedBox(height: 16),
-                const Text(
-                  'Something went wrong',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  errorDetails?.exception.toString() ?? 'Unknown error',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      hasError = false;
-                      errorDetails = null;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryGreen,
-                  ),
-                  child: const Text('Try Again'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    
-    return widget.child;
   }
 }
