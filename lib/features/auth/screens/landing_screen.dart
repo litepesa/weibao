@@ -19,18 +19,40 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint("LandingScreen initialized");
     _checkAuthentication();
   }
 
   Future<void> _checkAuthentication() async {
-    final authController = ref.read(authControllerProvider.notifier);
-    final isAuthenticated = await authController.checkAuth();
+    try {
+      debugPrint("Starting authentication check...");
+      final authController = ref.read(authControllerProvider.notifier);
+      debugPrint("Auth controller obtained, calling checkAuth()");
+      
+      final isAuthenticated = await authController.checkAuth();
+      debugPrint("Auth check complete: $isAuthenticated");
 
-    if (isAuthenticated) {
-      if (mounted) {
-        AppRouter.navigateToReplacement(context, Constants.homeScreen);
+      if (isAuthenticated) {
+        debugPrint("User is authenticated");
+        if (mounted) {
+          debugPrint("Navigating to home screen");
+          AppRouter.navigateToReplacement(context, Constants.homeScreen);
+        } else {
+          debugPrint("Widget not mounted after auth check");
+        }
+      } else {
+        debugPrint("User is not authenticated");
+        if (mounted) {
+          debugPrint("Setting loading to false");
+          setState(() {
+            _isLoading = false;
+          });
+        } else {
+          debugPrint("Widget not mounted after auth check");
+        }
       }
-    } else {
+    } catch (e) {
+      debugPrint("Error during authentication check: $e");
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -40,12 +62,14 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
   }
 
   void _navigateToLogin() {
+    debugPrint("Navigating to login screen");
     AppRouter.navigateToReplacement(context, Constants.loginScreen);
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    debugPrint("Building LandingScreen, isLoading: $_isLoading");
     
     // Color scheme
     const weibaoPrimaryColor = Color(0xFF07C160);
@@ -54,9 +78,33 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: weibaoBackgroundDark,
-        body: const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(weibaoPrimaryColor),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(weibaoPrimaryColor),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Loading...",
+                style: TextStyle(color: Colors.white),
+              ),
+              // Add a timeout button to escape a potential stuck state
+              const SizedBox(height: 30),
+              TextButton(
+                onPressed: () {
+                  debugPrint("Force loading to false");
+                  setState(() {
+                    _isLoading = false;
+                  });
+                },
+                child: Text(
+                  "Taking too long? Tap here",
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+            ],
           ),
         ),
       );

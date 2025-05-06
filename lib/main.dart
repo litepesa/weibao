@@ -3,20 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:weibao/constants.dart';
+import 'package:weibao/firebase_options.dart';
 import 'package:weibao/routes/app_router.dart';
 
-// Provider for Firebase initialization status
-final firebaseInitProvider = FutureProvider<bool>((ref) async {
-  try {
-    await Firebase.initializeApp();
-    return true;
-  } catch (e) {
-    debugPrint('Firebase initialization failed: $e');
-    return false;
-  }
-});
-
-Future<void> main() async {
+void main() async {
+  // Initialize Flutter binding
   WidgetsFlutterBinding.ensureInitialized();
   
   // Set preferred orientations
@@ -35,7 +26,17 @@ Future<void> main() async {
     ),
   );
   
-  // Wrap the entire app with ProviderScope for Riverpod
+  // Initialize Firebase BEFORE running the app
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint("Firebase initialized successfully");
+  } catch (e) {
+    debugPrint("Firebase initialization failed: $e");
+  }
+  
+  // Start the app after Firebase is initialized
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -43,14 +44,11 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the Firebase initialization status
-    final firebaseInit = ref.watch(firebaseInitProvider);
-    
+  Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'WeiBao',
@@ -85,47 +83,6 @@ class MyApp extends ConsumerWidget {
       ),
       initialRoute: Constants.landingScreen,
       onGenerateRoute: AppRouter.generateRoute,
-      home: firebaseInit.when(
-        data: (initialized) {
-          if (initialized) {
-            return const SizedBox(); // Router will handle navigation
-          } else {
-            return Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Failed to initialize Firebase',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        ref.refresh(firebaseInitProvider);
-                      },
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-        },
-        loading: () => const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
-        error: (error, stack) => Scaffold(
-          body: Center(
-            child: Text(
-              'Error initializing app: $error',
-              style: const TextStyle(color: Colors.red),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

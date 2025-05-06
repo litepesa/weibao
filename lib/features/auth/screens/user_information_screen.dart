@@ -24,6 +24,7 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> {
 
   File? _profileImage;
   bool _isImageProcessing = false;
+  bool _isSavingData = false;
 
   @override
   void initState() {
@@ -39,32 +40,46 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> {
   }
 
   Future<void> _selectImage(bool fromCamera) async {
-    setState(() {
-      _isImageProcessing = true;
-    });
+    try {
+      setState(() {
+        _isImageProcessing = true;
+      });
 
-    _profileImage = await pickImage(
-      fromCamera: fromCamera,
-      onFail: (String message) {
-        showSnackBar(context, message);
-      },
-    );
+      final File? pickedImage = await pickImage(
+        fromCamera: fromCamera,
+        onFail: (String message) {
+          if (mounted) {
+            showSnackBar(context, message);
+          }
+        },
+      );
 
-    if (_profileImage != null) {
-      await _cropImage(_profileImage?.path);
-    } else {
-      showSnackBar(context, 'No image selected');
+      if (pickedImage != null) {
+        await _cropImage(pickedImage.path);
+      } else {
+        if (mounted) {
+          showSnackBar(context, 'No image selected');
+        }
+      }
+    } catch (e) {
+      debugPrint("Error selecting image: $e");
+      if (mounted) {
+        showSnackBar(context, 'Error selecting image: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isImageProcessing = false;
+        });
+        Navigator.pop(context);
+      }
     }
-
-    setState(() {
-      _isImageProcessing = false;
-    });
-
-    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _cropImage(String? filePath) async {
-    if (filePath != null) {
+    if (filePath == null) return;
+    
+    try {
       final CroppedFile? croppedFile = await ImageCropper().cropImage(
         sourcePath: filePath,
         maxHeight: 800,
@@ -90,11 +105,20 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> {
       );
 
       if (croppedFile != null) {
-        setState(() {
-          _profileImage = File(croppedFile.path);
-        });
+        if (mounted) {
+          setState(() {
+            _profileImage = File(croppedFile.path);
+          });
+        }
       } else {
-        showSnackBar(context, 'Image cropping cancelled');
+        if (mounted) {
+          showSnackBar(context, 'Image cropping cancelled');
+        }
+      }
+    } catch (e) {
+      debugPrint("Error cropping image: $e");
+      if (mounted) {
+        showSnackBar(context, 'Error cropping image: $e');
       }
     }
   }
@@ -160,19 +184,40 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> {
   void _saveUserData() async {
     if (!_formKey.currentState!.validate()) return;
     
-    final authController = ref.read(authControllerProvider.notifier);
+    setState(() {
+      _isSavingData = true;
+    });
+    
+    try {
+      final authController = ref.read(authControllerProvider.notifier);
 
-    authController.saveUserData(
-      name: _nameController.text.trim(),
-      aboutMe: _aboutMeController.text.trim(), 
-      profileImage: _profileImage,
-      onSuccess: () {
-        AppRouter.navigateAndRemoveUntil(context, Constants.homeScreen);
-      },
-      onError: (error) {
-        showSnackBar(context, error);
-      },
-    );
+      await authController.saveUserData(
+        name: _nameController.text.trim(),
+        aboutMe: _aboutMeController.text.trim(), 
+        profileImage: _profileImage,
+        onSuccess: () {
+          if (mounted) {
+            AppRouter.navigateAndRemoveUntil(context, Constants.homeScreen);
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              _isSavingData = false;
+            });
+            showSnackBar(context, error);
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint("Error saving user data: $e");
+      if (mounted) {
+        setState(() {
+          _isSavingData = false;
+        });
+        showSnackBar(context, 'Error saving user data: $e');
+      }
+    }
   }
 
   Future<bool> _onWillPop() async {
@@ -200,7 +245,7 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(authControllerProvider).isLoading;
+    final isLoading = _isSavingData;
 
     return WillPopScope(
       onWillPop: _onWillPop,
@@ -450,7 +495,7 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                Row(
+                               Row(
                                   children: [
                                     const Icon(
                                       Icons.check_circle_outline,

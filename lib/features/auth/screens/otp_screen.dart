@@ -24,8 +24,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with SingleTickerProvider
   final focusNode = FocusNode();
   String? otpCode;
   
-  late String verificationId;
-  late String phoneNumber;
+  late String _verificationId;
+  late String _phoneNumber;
+
+  // Local verification state
+  bool _isVerifying = false;
+  bool _isVerified = false;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -38,11 +42,19 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with SingleTickerProvider
   void initState() {
     super.initState();
     
-    // Extract arguments
-    verificationId = widget.arguments[Constants.verificationId];
-    phoneNumber = widget.arguments[Constants.phoneNumber];
+    // Extract arguments - use null check to prevent crashes
+    _verificationId = widget.arguments[Constants.verificationId] as String? ?? '';
+    _phoneNumber = widget.arguments[Constants.phoneNumber] as String? ?? '';
     
-    // Setup animations
+    // Log for debugging
+    debugPrint("OTP Screen initialized with verification ID: $_verificationId");
+    debugPrint("Phone number: $_phoneNumber");
+    
+    if (_verificationId.isEmpty || _phoneNumber.isEmpty) {
+      debugPrint("Warning: Missing verification ID or phone number");
+      // We'll handle this in didChangeDependencies
+    }
+    
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -60,7 +72,23 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with SingleTickerProvider
     );
 
     _animationController.forward();
-    _startResendTimer();
+    
+    // Delay starting the timer until we're sure the screen is mounted
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _startResendTimer();
+        
+        // Show error and navigate back if arguments are invalid
+        if (_verificationId.isEmpty || _phoneNumber.isEmpty) {
+          showSnackBar(context, "Missing verification data. Please try again.");
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              AppRouter.pop(context);
+            }
+          });
+        }
+      }
+    });
   }
 
   void _startResendTimer() {
@@ -87,23 +115,44 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with SingleTickerProvider
   }
 
   void _verifyOtp(String otp) {
+    // Skip verification if data is missing
+    if (_verificationId.isEmpty || _phoneNumber.isEmpty) {
+      showSnackBar(context, "Missing verification data. Please try again.");
+      return;
+    }
+    
+    // Set local verification state
+    setState(() {
+      _isVerifying = true;
+    });
+    
     final authController = ref.read(authControllerProvider.notifier);
     
     authController.verifyOTP(
-      verificationId: verificationId,
+      verificationId: _verificationId,
       otp: otp,
       onComplete: (userExists) {
-        if (userExists) {
-          AppRouter.navigateAndRemoveUntil(context, Constants.homeScreen);
-        } else {
-          AppRouter.navigateToReplacement(context, Constants.userInformationScreen);
-        }
+        setState(() {
+          _isVerifying = false;
+          _isVerified = true;
+        });
+        
+        // Add a small delay for the animation to complete
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) {
+            if (userExists) {
+              AppRouter.navigateAndRemoveUntil(context, Constants.homeScreen);
+            } else {
+              AppRouter.navigateToReplacement(context, Constants.userInformationScreen);
+            }
+          }
+        });
       },
     );
   }
 
   void _resendOtp() {
-    if (!_resendEnabled) return;
+    if (!_resendEnabled || _phoneNumber.isEmpty) return;
     
     setState(() {
       _resendEnabled = false;
@@ -113,30 +162,27 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with SingleTickerProvider
     _startResendTimer();
     
     // Notify the user that code is resent
-    showSnackBar(context, 'OTP code has been resent');
+    showSnackBar(context, 'OTP code is being resent');
     
     // Re-trigger phone verification
     ref.read(authControllerProvider.notifier).signInWithPhone(
-      phoneNumber: phoneNumber,
+      phoneNumber: _phoneNumber,
       onError: (error) {
         showSnackBar(context, error);
       },
       onCodeSent: (newVerificationId, _) {
         // Update verification ID
         setState(() {
-          verificationId = newVerificationId;
+          _verificationId = newVerificationId;
         });
+        showSnackBar(context, 'New OTP code has been sent');
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.isLoading;
-    final isSuccessful = authState.isAuthenticated; 
-    
-    // Pin themes
+    // Define pin themes
     final defaultPinTheme = PinTheme(
       width: 56,
       height: 60,
@@ -196,7 +242,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with SingleTickerProvider
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => AppRouter.pop(context),
         ),
       ),
       body: FadeTransition(
@@ -243,7 +289,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with SingleTickerProvider
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        phoneNumber,
+                        _phoneNumber,
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -252,7 +298,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with SingleTickerProvider
                       ),
                       IconButton(
                         icon: const Icon(Icons.edit, size: 16, color: Color(0xFF07C160)),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => AppRouter.pop(context),
                       ),
                     ],
                   ),
@@ -274,15 +320,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with SingleTickerProvider
                       });
                       _verifyOtp(pin);
                     },
+                    enabled: !_isVerifying && !_isVerified,
                   ),
                   const SizedBox(height: 36),
 
                   // Loading/Success indicator
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
-                    child: isLoading
+                    child: _isVerifying
                         ? const CircularProgressIndicator(color: Color(0xFF07C160))
-                        : isSuccessful
+                        : _isVerified
                             ? Container(
                                 key: const ValueKey('success'),
                                 height: 60,

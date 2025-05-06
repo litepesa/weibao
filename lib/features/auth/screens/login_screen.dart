@@ -29,6 +29,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     displayNameNoCountryCode: 'KE',
     e164Key: '',
   );
+  
+  // Add local loading state that we control
+  bool _isSigningIn = false;
 
   bool get isPhoneNumberValid {
     final phoneNumber = _phoneNumberController.text;
@@ -46,14 +49,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _signInWithPhoneNumber() {
     if (!isPhoneNumberValid) return;
     
+    // Set our local loading state to true
+    setState(() {
+      _isSigningIn = true;
+    });
+    
     final formattedPhoneNumber = _formatPhoneNumber(_phoneNumberController.text);
+    
+    debugPrint("Attempting to sign in with: $formattedPhoneNumber");
     
     ref.read(authControllerProvider.notifier).signInWithPhone(
       phoneNumber: formattedPhoneNumber,
       onError: (error) {
+        // Reset our local loading state on error
+        setState(() {
+          _isSigningIn = false;
+        });
+        debugPrint("Sign in error: $error");
         showSnackBar(context, error);
       },
       onCodeSent: (verificationId, phoneNumber) {
+        // Reset our local loading state on success
+        setState(() {
+          _isSigningIn = false;
+        });
+        debugPrint("Code sent successfully, navigating to OTP screen");
         AppRouter.navigateTo(
           context,
           Constants.otpScreen,
@@ -75,7 +95,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final isLoading = ref.watch(authControllerProvider).isLoading;
+    
+    // We're not using the auth state's loading indicator anymore
+    // final authState = ref.watch(authControllerProvider);
+    // final isLoading = authState.isLoading;
     
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
@@ -225,10 +248,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              Icon(
+                              const Icon(
                                 Icons.keyboard_arrow_down_rounded,
                                 size: 18,
-                                color: const Color(0xFF888888),
+                                color: Color(0xFF888888),
                               ),
                             ],
                           ),
@@ -264,11 +287,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 18),
                             suffixIcon: isPhoneNumberValid
-                                ? Padding(
-                                    padding: const EdgeInsets.only(right: 12.0),
+                                ? const Padding(
+                                    padding: EdgeInsets.only(right: 12.0),
                                     child: Icon(
                                       Icons.check_circle,
-                                      color: const Color(0xFF07C160),
+                                      color: Color(0xFF07C160),
                                       size: 20,
                                     ),
                                   )
@@ -300,10 +323,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       gradient: isPhoneNumberValid
-                          ? LinearGradient(
+                          ? const LinearGradient(
                               colors: [
-                                const Color(0xFF07C160),
-                                const Color(0xFF07C160).withGreen(200)
+                                Color(0xFF07C160),
+                                Color(0xFF07C160),
                               ],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
@@ -314,7 +337,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           : const Color(0xFF07C160).withOpacity(0.6),
                     ),
                     child: ElevatedButton(
-                      onPressed: isPhoneNumberValid && !isLoading
+                      // Only enable button if phone number is valid and we're not already signing in
+                      onPressed: isPhoneNumberValid && !_isSigningIn
                           ? _signInWithPhoneNumber
                           : null,
                       style: ElevatedButton.styleFrom(
@@ -328,7 +352,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         elevation: 0,
                         shadowColor: Colors.transparent,
                       ),
-                      child: isLoading
+                      // Use our local loading state instead of the auth state
+                      child: _isSigningIn
                           ? const SizedBox(
                               height: 24,
                               width: 24,
@@ -360,20 +385,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: const Color(0xFFB2B2B2),
                         height: 1.5,
                       ),
-                      children: [
-                        const TextSpan(text: 'By continuing, you agree to our '),
+                      children: const [
+                        TextSpan(text: 'By continuing, you agree to our '),
                         TextSpan(
                           text: 'Terms',
                           style: TextStyle(
-                            color: const Color(0xFF07C160),
+                            color: Color(0xFF07C160),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const TextSpan(text: ' and '),
+                        TextSpan(text: ' and '),
                         TextSpan(
                           text: 'Privacy Policy',
                           style: TextStyle(
-                            color: const Color(0xFF07C160),
+                            color: Color(0xFF07C160),
                             fontWeight: FontWeight.w500,
                           ),
                         ),

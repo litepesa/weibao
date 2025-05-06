@@ -61,6 +61,7 @@ class AuthRepository implements BaseAuthRepository {
     
     // Check if user is logged in
     if (_auth.currentUser != null) {
+      debugPrint("User is already logged in: ${_auth.currentUser!.uid}");
       return true;
     }
     
@@ -75,6 +76,7 @@ class AuthRepository implements BaseAuthRepository {
         
         // If we have cached user data but auth is null, try restoring session
         if (user.uid.isNotEmpty) {
+          debugPrint("Found cached user: ${user.uid}");
           return true;
         }
       }
@@ -82,22 +84,31 @@ class AuthRepository implements BaseAuthRepository {
       debugPrint('Error checking cached auth state: $e');
     }
     
+    debugPrint("No authenticated user found");
     return false;
   }
 
   @override
   Future<bool> checkUserExists(String uid) async {
-    final doc = await _firestore.collection(Constants.users).doc(uid).get();
-    return doc.exists;
+    try {
+      debugPrint("Checking if user exists: $uid");
+      final doc = await _firestore.collection(Constants.users).doc(uid).get();
+      return doc.exists;
+    } catch (e) {
+      debugPrint("Error checking if user exists: $e");
+      return false;
+    }
   }
 
   @override
   Future<UserModel?> getUserData(String uid) async {
     try {
+      debugPrint("Getting user data for: $uid");
       final doc = await _firestore.collection(Constants.users).doc(uid).get();
       if (doc.exists) {
         return UserModel.fromMap(doc.data() as Map<String, dynamic>);
       }
+      debugPrint("No user found with ID: $uid");
       return null;
     } catch (e) {
       debugPrint('Error getting user data: $e');
@@ -108,8 +119,10 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<void> saveUserData(UserModel user, {File? profileImage}) async {
     try {
+      debugPrint("Saving user data for: ${user.uid}");
       if (profileImage != null) {
         // Upload image to storage
+        debugPrint("Uploading profile image");
         final imageUrl = await storeFileToStorage(
           file: profileImage,
           reference: '${Constants.userImages}/${user.uid}',
@@ -123,10 +136,12 @@ class AuthRepository implements BaseAuthRepository {
       );
 
       // Save to Firestore
+      debugPrint("Saving user to Firestore");
       await _firestore.collection(Constants.users).doc(user.uid).set(user.toMap());
       
       // Cache user data
       await _saveUserToPrefs(user);
+      debugPrint("User data saved successfully");
     } catch (e) {
       debugPrint('Error saving user data: $e');
       throw Exception('Failed to save user data: $e');
@@ -135,6 +150,7 @@ class AuthRepository implements BaseAuthRepository {
 
   Future<void> _saveUserToPrefs(UserModel user) async {
     try {
+      debugPrint("Saving user to SharedPreferences");
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(Constants.userModel, jsonEncode(user.toMap()));
     } catch (e) {
@@ -144,31 +160,40 @@ class AuthRepository implements BaseAuthRepository {
 
   @override
   Future<void> signInWithPhone(
-    String phoneNumber,
-    void Function(String) onError,
-    void Function(String, String) onCodeSent,
+    String phoneNumber, 
+    void Function(String) onError, 
+    void Function(String, String) onCodeSent
   ) async {
     try {
+      debugPrint("Starting phone verification for: $phoneNumber");
+      
       await _auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
+        timeout: const Duration(seconds: 60),
         verificationCompleted: (PhoneAuthCredential credential) async {
           // Auto-verification completed (Android only)
+          debugPrint("Auto verification completed");
           try {
             await _auth.signInWithCredential(credential);
           } catch (e) {
+            debugPrint("Error in auto verification: $e");
             onError(e.toString());
           }
         },
         verificationFailed: (FirebaseAuthException e) {
+          debugPrint("Verification failed: ${e.message}");
           onError(e.message ?? 'Verification failed');
         },
         codeSent: (String verificationId, int? resendToken) {
+          debugPrint("Code sent successfully to $phoneNumber, verification ID: $verificationId");
           onCodeSent(verificationId, phoneNumber);
         },
-        codeAutoRetrievalTimeout: (String verificationId) {},
-        timeout: const Duration(seconds: 60),
+        codeAutoRetrievalTimeout: (String verificationId) {
+          debugPrint("Code auto retrieval timeout");
+        },
       );
     } catch (e) {
+      debugPrint("Exception in signInWithPhone: $e");
       onError(e.toString());
     }
   }
@@ -176,6 +201,7 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<UserCredential> verifyOTP(String verificationId, String otp) async {
     try {
+      debugPrint("Verifying OTP for verification ID: $verificationId");
       final credential = PhoneAuthProvider.credential(
         verificationId: verificationId,
         smsCode: otp,
@@ -190,9 +216,11 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<void> logout() async {
     try {
+      debugPrint("Logging out user");
       await _auth.signOut();
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+      debugPrint("User logged out successfully");
     } catch (e) {
       debugPrint('Error logging out: $e');
       throw Exception('Failed to logout: $e');
@@ -201,11 +229,13 @@ class AuthRepository implements BaseAuthRepository {
 
   @override
   Stream<DocumentSnapshot> userStream(String uid) {
+    debugPrint("Getting user stream for: $uid");
     return _firestore.collection(Constants.users).doc(uid).snapshots();
   }
 
   @override
   Stream<QuerySnapshot> getAllUsers(String exceptUid) {
+    debugPrint("Getting all users except: $exceptUid");
     return _firestore
         .collection(Constants.users)
         .where(Constants.uid, isNotEqualTo: exceptUid)
@@ -215,6 +245,7 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<void> addContact(String uid, String contactId) async {
     try {
+      debugPrint("Adding contact $contactId for user: $uid");
       await _firestore.collection(Constants.users).doc(uid).update({
         Constants.contactsUIDs: FieldValue.arrayUnion([contactId]),
       });
@@ -227,6 +258,7 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<void> removeContact(String uid, String contactId) async {
     try {
+      debugPrint("Removing contact $contactId for user: $uid");
       await _firestore.collection(Constants.users).doc(uid).update({
         Constants.contactsUIDs: FieldValue.arrayRemove([contactId]),
       });
@@ -239,6 +271,7 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<void> blockContact(String uid, String contactId) async {
     try {
+      debugPrint("Blocking contact $contactId for user: $uid");
       await _firestore.collection(Constants.users).doc(uid).update({
         Constants.blockedUIDs: FieldValue.arrayUnion([contactId]),
       });
@@ -251,6 +284,7 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<void> unblockContact(String uid, String contactId) async {
     try {
+      debugPrint("Unblocking contact $contactId for user: $uid");
       await _firestore.collection(Constants.users).doc(uid).update({
         Constants.blockedUIDs: FieldValue.arrayRemove([contactId]),
       });
@@ -263,6 +297,7 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<List<UserModel>> getContactsList(String uid, List<String> excludeIds) async {
     try {
+      debugPrint("Getting contacts list for user: $uid");
       final doc = await _firestore.collection(Constants.users).doc(uid).get();
       final List<dynamic> contactsUIDs = doc.get(Constants.contactsUIDs);
       
@@ -286,6 +321,7 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<List<UserModel>> getBlockedContactsList(String uid) async {
     try {
+      debugPrint("Getting blocked contacts for user: $uid");
       final doc = await _firestore.collection(Constants.users).doc(uid).get();
       final List<dynamic> blockedUIDs = doc.get(Constants.blockedUIDs);
       
@@ -307,6 +343,7 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<UserModel?> searchUserByPhoneNumber(String phoneNumber) async {
     try {
+      debugPrint("Searching for user with phone number: $phoneNumber");
       final query = await _firestore
           .collection(Constants.users)
           .where(Constants.phoneNumber, isEqualTo: phoneNumber)
@@ -317,6 +354,7 @@ class AuthRepository implements BaseAuthRepository {
         return UserModel.fromMap(query.docs.first.data());
       }
       
+      debugPrint("No user found with phone number: $phoneNumber");
       return null;
     } catch (e) {
       debugPrint('Error searching user by phone number: $e');
@@ -327,6 +365,7 @@ class AuthRepository implements BaseAuthRepository {
   @override
   Future<void> updateUserProfile(UserModel user) async {
     try {
+      debugPrint("Updating user profile for: ${user.uid}");
       await _firestore
           .collection(Constants.users)
           .doc(user.uid)
@@ -334,6 +373,7 @@ class AuthRepository implements BaseAuthRepository {
       
       // Update cached user data
       await _saveUserToPrefs(user);
+      debugPrint("User profile updated successfully");
     } catch (e) {
       debugPrint('Error updating user profile: $e');
       throw Exception('Failed to update user profile: $e');

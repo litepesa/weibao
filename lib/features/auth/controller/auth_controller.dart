@@ -68,11 +68,14 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     
     try {
+      debugPrint("Checking authentication state");
       final isAuthenticated = await _repository.checkAuthState();
       
       if (isAuthenticated) {
+        debugPrint("User is authenticated");
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
+          debugPrint("Current user: ${user.uid}");
           final userData = await _repository.getUserData(user.uid);
           
           state = state.copyWith(
@@ -83,12 +86,14 @@ class AuthController extends StateNotifier<AuthState> {
             userModel: userData,
           );
         } else {
+          debugPrint("Firebase user is null despite authenticated state");
           state = state.copyWith(
             isLoading: false,
             isAuthenticated: false,
           );
         }
       } else {
+        debugPrint("User is not authenticated");
         state = state.copyWith(
           isLoading: false,
           isAuthenticated: false,
@@ -97,6 +102,7 @@ class AuthController extends StateNotifier<AuthState> {
       
       return isAuthenticated;
     } catch (e) {
+      debugPrint("Error checking authentication: $e");
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
@@ -115,9 +121,11 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     
     try {
+      debugPrint("Initiating phone sign-in for: $phoneNumber");
       await _repository.signInWithPhone(
         phoneNumber,
         (error) {
+          debugPrint("Phone sign-in error: $error");
           state = state.copyWith(
             isLoading: false,
             error: error,
@@ -125,6 +133,7 @@ class AuthController extends StateNotifier<AuthState> {
           onError(error);
         },
         (verificationId, phone) {
+          debugPrint("Code sent successfully to: $phone");
           state = state.copyWith(
             isLoading: false,
             phoneNumber: phone,
@@ -133,6 +142,7 @@ class AuthController extends StateNotifier<AuthState> {
         },
       );
     } catch (e) {
+      debugPrint("Exception in signInWithPhone: $e");
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
@@ -150,10 +160,12 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     
     try {
+      debugPrint("Verifying OTP for verificationId: $verificationId");
       final credential = await _repository.verifyOTP(verificationId, otp);
       final user = credential.user;
       
       if (user != null) {
+        debugPrint("OTP verification successful for user: ${user.uid}");
         state = state.copyWith(
           isLoading: false,
           isAuthenticated: true,
@@ -163,6 +175,7 @@ class AuthController extends StateNotifier<AuthState> {
         
         // Check if user exists in database
         final userExists = await _repository.checkUserExists(user.uid);
+        debugPrint("User exists in database: $userExists");
         
         if (userExists) {
           final userData = await _repository.getUserData(user.uid);
@@ -171,6 +184,7 @@ class AuthController extends StateNotifier<AuthState> {
         
         onComplete(userExists);
       } else {
+        debugPrint("Verification failed: user is null");
         state = state.copyWith(
           isLoading: false,
           error: 'Verification failed',
@@ -178,6 +192,7 @@ class AuthController extends StateNotifier<AuthState> {
         onComplete(false);
       }
     } catch (e) {
+      debugPrint("Error verifying OTP: $e");
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
@@ -197,7 +212,9 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     
     try {
+      debugPrint("Saving user data");
       if (state.uid == null || state.phoneNumber == null) {
+        debugPrint("Cannot save user data: User not authenticated");
         throw Exception('User not authenticated');
       }
       
@@ -214,6 +231,7 @@ class AuthController extends StateNotifier<AuthState> {
         blockedUIDs: [],
       );
       
+      debugPrint("Created user model, saving to database");
       // Save to database
       await _repository.saveUserData(userModel, profileImage: profileImage);
       
@@ -223,8 +241,10 @@ class AuthController extends StateNotifier<AuthState> {
         userModel: userModel,
       );
       
+      debugPrint("User data saved successfully");
       onSuccess();
     } catch (e) {
+      debugPrint("Error saving user data: $e");
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
@@ -242,6 +262,7 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     
     try {
+      debugPrint("Updating user profile for: ${updatedUser.uid}");
       await _repository.updateUserProfile(updatedUser);
       
       state = state.copyWith(
@@ -249,8 +270,10 @@ class AuthController extends StateNotifier<AuthState> {
         userModel: updatedUser,
       );
       
+      debugPrint("User profile updated successfully");
       onSuccess();
     } catch (e) {
+      debugPrint("Error updating user profile: $e");
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
@@ -262,8 +285,12 @@ class AuthController extends StateNotifier<AuthState> {
   // Contact management functions
   Future<void> addContact(String contactId) async {
     try {
-      if (state.uid == null) return;
+      if (state.uid == null) {
+        debugPrint("Cannot add contact: User not authenticated");
+        return;
+      }
       
+      debugPrint("Adding contact $contactId for user ${state.uid}");
       await _repository.addContact(state.uid!, contactId);
       
       // Update state if userModel exists
@@ -272,6 +299,7 @@ class AuthController extends StateNotifier<AuthState> {
         state = state.copyWith(
           userModel: state.userModel!.copyWith(contactsUIDs: updatedContacts),
         );
+        debugPrint("Contact added successfully");
       }
     } catch (e) {
       debugPrint('Error adding contact: $e');
@@ -280,8 +308,12 @@ class AuthController extends StateNotifier<AuthState> {
   
   Future<void> removeContact(String contactId) async {
     try {
-      if (state.uid == null) return;
+      if (state.uid == null) {
+        debugPrint("Cannot remove contact: User not authenticated");
+        return;
+      }
       
+      debugPrint("Removing contact $contactId for user ${state.uid}");
       await _repository.removeContact(state.uid!, contactId);
       
       // Update state if userModel exists
@@ -292,6 +324,7 @@ class AuthController extends StateNotifier<AuthState> {
         state = state.copyWith(
           userModel: state.userModel!.copyWith(contactsUIDs: updatedContacts),
         );
+        debugPrint("Contact removed successfully");
       }
     } catch (e) {
       debugPrint('Error removing contact: $e');
@@ -300,8 +333,12 @@ class AuthController extends StateNotifier<AuthState> {
   
   Future<void> blockContact(String contactId) async {
     try {
-      if (state.uid == null) return;
+      if (state.uid == null) {
+        debugPrint("Cannot block contact: User not authenticated");
+        return;
+      }
       
+      debugPrint("Blocking contact $contactId for user ${state.uid}");
       await _repository.blockContact(state.uid!, contactId);
       
       // Update state if userModel exists
@@ -310,6 +347,7 @@ class AuthController extends StateNotifier<AuthState> {
         state = state.copyWith(
           userModel: state.userModel!.copyWith(blockedUIDs: updatedBlocked),
         );
+        debugPrint("Contact blocked successfully");
       }
     } catch (e) {
       debugPrint('Error blocking contact: $e');
@@ -318,8 +356,12 @@ class AuthController extends StateNotifier<AuthState> {
   
   Future<void> unblockContact(String contactId) async {
     try {
-      if (state.uid == null) return;
+      if (state.uid == null) {
+        debugPrint("Cannot unblock contact: User not authenticated");
+        return;
+      }
       
+      debugPrint("Unblocking contact $contactId for user ${state.uid}");
       await _repository.unblockContact(state.uid!, contactId);
       
       // Update state if userModel exists
@@ -330,6 +372,7 @@ class AuthController extends StateNotifier<AuthState> {
         state = state.copyWith(
           userModel: state.userModel!.copyWith(blockedUIDs: updatedBlocked),
         );
+        debugPrint("Contact unblocked successfully");
       }
     } catch (e) {
       debugPrint('Error unblocking contact: $e');
@@ -339,6 +382,7 @@ class AuthController extends StateNotifier<AuthState> {
   // Search for a user by phone number
   Future<UserModel?> searchUserByPhone(String phoneNumber) async {
     try {
+      debugPrint("Searching for user with phone number: $phoneNumber");
       return await _repository.searchUserByPhoneNumber(phoneNumber);
     } catch (e) {
       debugPrint('Error searching user: $e');
@@ -349,8 +393,10 @@ class AuthController extends StateNotifier<AuthState> {
   // Logout
   Future<void> logout() async {
     try {
+      debugPrint("Logging out user");
       await _repository.logout();
       state = AuthState.initial();
+      debugPrint("Logout successful");
     } catch (e) {
       debugPrint('Error logging out: $e');
     }
