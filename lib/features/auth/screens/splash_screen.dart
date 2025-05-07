@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:weibao/constants.dart';
 import 'package:weibao/features/auth/provider/auth_provider.dart';
 import 'package:weibao/shared/theme/theme_constants.dart';
@@ -79,12 +80,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
           debugPrint('User is authenticated with valid user data, navigating to home screen');
           
           // Navigate to home screen if authenticated and has user data
-          Navigator.pushReplacementNamed(context, Constants.homeScreen);
+          context.go(Constants.homeScreen);
         } else {
           debugPrint('User is NOT authenticated or missing user data, navigating to landing screen');
           
           // Navigate to landing screen if not authenticated or missing user data
-          Navigator.pushReplacementNamed(context, Constants.landingScreen);
+          context.go(Constants.landingScreen);
         }
       } else {
         debugPrint('Widget no longer mounted, skipping navigation');
@@ -95,7 +96,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
       
       if (mounted) {
         // Navigate to landing screen if there was an error
-        Navigator.pushReplacementNamed(context, Constants.landingScreen);
+        context.go(Constants.landingScreen);
       }
     }
   }

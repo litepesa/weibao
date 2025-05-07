@@ -2,6 +2,7 @@ import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:weibao/constants.dart';
 import 'package:weibao/features/auth/provider/auth_provider.dart';
 import 'package:weibao/shared/theme/theme_constants.dart';
@@ -80,10 +81,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
       phoneNumber: formattedNumber,
       context: context,
       onCodeSent: (verificationId) {
-        // Navigate to OTP verification screen
-        Navigator.of(context).pushNamed(
+        // Navigate to OTP verification screen using GoRouter
+        context.push(
           Constants.otpScreen,
-          arguments: {
+          extra: {
             Constants.verificationId: verificationId,
             Constants.phoneNumber: formattedNumber,
           },
@@ -104,7 +105,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
       ),
       body: FadeTransition(

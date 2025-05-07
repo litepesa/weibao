@@ -1,32 +1,20 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:weibao/constants.dart';
+import 'package:weibao/app_router.dart';
 import 'package:weibao/firebase_options.dart';
-import 'package:weibao/router.dart';
-import 'package:weibao/shared/theme/theme_constants.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:weibao/providers/app_theme.dart';
+import 'package:weibao/shared/utils/system_ui_handler.dart';
 
 void main() async {
   // Initialize Flutter binding
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // Set portrait orientation only
+  SystemUIHandler.setPortraitOrientation();
   
-  // System UI styling
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ),
-  );
+  // Make system UI transparent
+  SystemUIHandler.makeTransparent();
   
   // Initialize Firebase
   try {
@@ -38,7 +26,7 @@ void main() async {
     debugPrint('Firebase initialization failed: $e');
   }
   
-  // Run app with minimal setup
+  // Run app
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -46,27 +34,24 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'WeiBao',
-      theme: ThemeData(
-        primaryColor: AppColors.primaryGreen,
-        scaffoldBackgroundColor: AppColors.background,
-        colorScheme: ColorScheme.fromSwatch().copyWith(
-          primary: AppColors.primaryGreen,
-          secondary: AppColors.accentBlue,
-          background: AppColors.background,
-          surface: AppColors.surface,
-        ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Get router from provider
+    final router = ref.watch(routerProvider);
+    
+    // Get theme from provider
+    final appTheme = ref.watch(themeProvider);
+    
+    return TransparentSystemUI(
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        title: 'WeiBao',
+        theme: appTheme.themeData,
+        routerConfig: router,
       ),
-      // Always start with splash screen, which will handle authentication check
-      initialRoute: Constants.splashScreen,
-      onGenerateRoute: AppRouter.generateRoute,
     );
   }
 }

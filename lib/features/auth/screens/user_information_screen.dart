@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:weibao/constants.dart';
 import 'package:weibao/features/auth/provider/auth_provider.dart';
@@ -63,10 +64,7 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> w
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    Constants.loginScreen,
-                    (route) => false,
-                  );
+                  context.go(Constants.loginScreen);
                 },
                 child: const Text('OK'),
               ),
@@ -110,7 +108,7 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> w
         _isImageProcessing = false;
       });
       
-      if (mounted) Navigator.pop(context);
+      if (mounted) context.pop(); // Close modal using GoRouter
     }
   }
   
@@ -249,11 +247,8 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> w
       profileImage: _profileImage,
       onSuccess: () {
         debugPrint('User profile created successfully');
-        // Navigate to home screen
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          Constants.homeScreen,
-          (route) => false,
-        );
+        // Navigate to home screen using GoRouter
+        context.go(Constants.homeScreen);
       },
       onFail: (error) {
         debugPrint('Failed to save profile: $error');
@@ -303,8 +298,15 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> w
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          context.pop();
+        }
+      },
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
@@ -313,7 +315,7 @@ class _UserInformationScreenState extends ConsumerState<UserInformationScreen> w
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
             onPressed: () async {
-              if (await _onWillPop()) Navigator.of(context).pop();
+              if (await _onWillPop()) context.pop();
             },
           ),
           centerTitle: true,

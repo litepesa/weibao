@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:weibao/constants.dart';
 import 'package:weibao/features/auth/provider/auth_provider.dart';
@@ -53,7 +54,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> with SingleTicker
       // Navigate to home screen if already authenticated and has user data
       if (mounted) {
         debugPrint('User is authenticated with data, navigating to home screen from landing');
-        Navigator.pushReplacementNamed(context, Constants.homeScreen);
+        context.go(Constants.homeScreen);
       }
     } else {
       // Show landing screen animations if not authenticated or missing user data
@@ -67,7 +68,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> with SingleTicker
   }
 
   void navigateToLogin() {
-    Navigator.pushNamed(context, Constants.loginScreen);
+    context.push(Constants.loginScreen);
   }
 
   @override

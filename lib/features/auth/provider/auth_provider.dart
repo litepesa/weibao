@@ -447,6 +447,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
       onFail(e.toString());
     }
   }
+
+  // Setup persistent auth state listener
+void setupAuthStateListener() {
+  _auth.authStateChanges().listen((User? user) async {
+    if (user == null) {
+      // User is not authenticated
+      state = AuthState();
+      debugPrint('Auth state listener: User is not authenticated');
+    } else {
+      // User is authenticated, get UID
+      state = state.copyWith(uid: user.uid, phoneNumber: user.phoneNumber);
+      debugPrint('Auth state listener: User is authenticated with UID: ${user.uid}');
+      
+      // Check if user exists in Firestore
+      bool userExists = await checkUserExists();
+      if (userExists) {
+        // Get user data from Firestore and save to SharedPreferences
+        await getUserDataFromFireStore();
+        if (state.userModel != null) {
+          await saveUserDataToSharedPreferences();
+          state = state.copyWith(isSuccessful: true);
+        }
+      }
+    }
+  });
+}
 }
 
 // Create the provider

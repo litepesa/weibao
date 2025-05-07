@@ -1,6 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:weibao/constants.dart';
+import 'package:weibao/features/auth/provider/auth_provider.dart';
 import 'package:weibao/shared/theme/theme_constants.dart';
 import 'package:weibao/shared/components/modern_bottom_nav.dart';
 
@@ -36,9 +39,9 @@ class HomeScreen extends ConsumerWidget {
         title: RichText(
           text: TextSpan(
             children: [
-              TextSpan(
+              const TextSpan(
                 text: 'Wei',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.white, // Different color for 'Wei'
                   fontSize: 23,
@@ -99,6 +102,21 @@ class HomeScreen extends ConsumerWidget {
                     : Theme.of(context).textTheme.bodySmall?.color,
               ),
             ),
+            // Logout Button
+            if (selectedIndex == 3)
+              Padding(
+                padding: const EdgeInsets.only(top: 40),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Logout'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  onPressed: () => _handleLogout(context, ref),
+                ),
+              ),
           ],
         ),
       ),
@@ -153,5 +171,45 @@ class HomeScreen extends ConsumerWidget {
       case 3: return Icons.person;
       default: return Icons.chat_bubble;
     }
+  }
+  
+  void _handleLogout(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop(); // Close dialog
+              
+              // Show loading indicator
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+              
+              // Perform logout
+              final authNotifier = ref.read(authProvider.notifier);
+              await authNotifier.logout();
+              
+              // Navigate to landing screen
+              if (context.mounted) {
+                context.go(Constants.landingScreen);
+              }
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
   }
 }

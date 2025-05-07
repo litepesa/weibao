@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 import 'package:weibao/constants.dart';
 import 'package:weibao/features/auth/provider/auth_provider.dart';
@@ -92,10 +93,8 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
       context: context,
       onCodeSent: (String verificationId) {
         // Update the verification ID in the arguments
-        if (mounted) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map;
-          args[Constants.verificationId] = verificationId;
-        }
+        final args = GoRouterState.of(context).extra as Map;
+        args[Constants.verificationId] = verificationId;
         
         // Show snackbar
         ScaffoldMessenger.of(context).showSnackBar(
@@ -143,19 +142,13 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
           await authNotifier.saveUserDataToSharedPreferences();
           
           if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              Constants.homeScreen,
-              (route) => false,
-            );
+            // Navigate to home screen and clear history
+            context.go(Constants.homeScreen);
           }
         } else {
           // User doesn't exist, navigate to user info screen
           if (mounted) {
-            Navigator.pushReplacementNamed(
-              context,
-              Constants.userInformationScreen,
-            );
+            context.go(Constants.userInformationScreen);
           }
         }
       },
@@ -164,10 +157,22 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
   
   @override
   Widget build(BuildContext context) {
-    // Get arguments from route
-    final args = ModalRoute.of(context)!.settings.arguments as Map;
-    final verificationId = args[Constants.verificationId] as String;
-    final phoneNumber = args[Constants.phoneNumber] as String;
+    // Get arguments from GoRouter
+    final args = GoRouterState.of(context).extra as Map?;
+    
+    // Default values if args are missing
+    final verificationId = args?[Constants.verificationId] as String? ?? '';
+    final phoneNumber = args?[Constants.phoneNumber] as String? ?? '';
+    
+    // If no valid data, go back to login
+    if (verificationId.isEmpty || phoneNumber.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go(Constants.loginScreen);
+      });
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     
     final authState = ref.watch(authProvider);
     
@@ -220,7 +225,7 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
       ),
       body: FadeTransition(
@@ -290,7 +295,7 @@ class _OTPScreenState extends ConsumerState<OTPScreen> with SingleTickerProvider
                             size: 18,
                             color: AppColors.primaryGreen,
                           ),
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => context.pop(),
                         ),
                       ],
                     ),

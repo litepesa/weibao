@@ -1,37 +1,37 @@
 import 'package:flutter/material.dart';
 
 class Constants {
-  // Screen routes
-  static const String splashScreen = '/splashScreen';
-  static const String landingScreen = '/landingScreen';
-  static const String loginScreen = '/loginScreen';
-  static const String otpScreen = '/otpScreen';
-  static const String userInformationScreen = '/userInformationScreen';
-  static const String homeScreen = '/homeScreen';
-  static const String chatScreen = '/chatScreen';
-  static const String contactProfileScreen = '/contactProfileScreen';
-  static const String myProfileScreen = '/myProfileScreen'; 
-  static const String editProfileScreen = '/editProfileScreen';
-  static const String searchScreen = '/searchScreen';
-  static const String contactsScreen = '/contactsScreen';
-  static const String addContactScreen = '/addContactScreen';
-  static const String settingsScreen = '/settingsScreen';
-  static const String aboutScreen = '/aboutScreen';
-  static const String privacyPolicyScreen = '/privacyPolicyScreen';
-  static const String termsAndConditionsScreen = '/termsAndConditionsScreen';
-  static const String groupSettingsScreen = '/groupSettingsScreen';
-  static const String groupInformationScreen = '/groupInformationScreen';
-  static const String groupsScreen = '/groupsScreen';
-  static const String createGroupScreen = '/createGroupScreen';
-  static const String blockedContactsScreen = '/blockedContactsScreen';
+  // Screen routes - updated for GoRouter
+  static const String splashScreen = '/splash';
+  static const String landingScreen = '/landing';
+  static const String loginScreen = '/login';
+  static const String otpScreen = '/otp';
+  static const String userInformationScreen = '/user-information';
+  static const String homeScreen = '/home';
+  static const String chatScreen = '/chat';
+  static const String contactProfileScreen = '/contact-profile';
+  static const String myProfileScreen = '/my-profile'; 
+  static const String editProfileScreen = '/edit-profile';
+  static const String searchScreen = '/search';
+  static const String contactsScreen = '/contacts';
+  static const String addContactScreen = '/add-contact';
+  static const String settingsScreen = '/settings';
+  static const String aboutScreen = '/about';
+  static const String privacyPolicyScreen = '/privacy-policy';
+  static const String termsAndConditionsScreen = '/terms-and-conditions';
+  static const String groupSettingsScreen = '/group-settings';
+  static const String groupInformationScreen = '/group-information';
+  static const String groupsScreen = '/groups';
+  static const String createGroupScreen = '/create-group';
+  static const String blockedContactsScreen = '/blocked-contacts';
   
   // Status feature routes
-  static const String statusOverviewScreen = '/statusOverviewScreen';
-  static const String createStatusScreen = '/createStatusScreen';
-  static const String myStatusesScreen = '/myStatusesScreen';
-  static const String statusViewerScreen = '/statusViewerScreen';
-  static const String mediaViewScreen = '/mediaViewScreen';
-  static const String statusDetailScreen = '/statusDetailScreen';
+  static const String statusOverviewScreen = '/status-overview';
+  static const String createStatusScreen = '/create-status';
+  static const String myStatusesScreen = '/my-statuses';
+  static const String statusViewerScreen = '/status-viewer';
+  static const String mediaViewScreen = '/media-view';
+  static const String statusDetailScreen = '/status-detail';
   
   // Collection names for Status
   static const String statuses = 'statuses';
